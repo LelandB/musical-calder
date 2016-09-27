@@ -1,2 +1,1 @@
-Plays a note (A4 or 440 Hz) when a node is clicked.
-Also highlights neighboring nodes.
+Plays a chord when a node is clicked using MIDI.js
