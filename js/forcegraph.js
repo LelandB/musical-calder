@@ -37,43 +37,17 @@ svg.call(linktip);
 var link;
 var node;
 
-//Begin Web Audio API/Music functionality
-var oscillator = null;
-var gainNode = null;
-//need an instance of AudioContext to build an audio graph on
-var audioCtx = new AudioContext();
+function playSound(node, offset) {
+            var delay = 0;
+            var chordNote1 = 48 + (offset * 4);
+            var chordNote2 = 52 + (offset * 4);
+            var chordNote3 = 55 + (offset * 4);
+            var velocity = 127;
 
-// Called to create a new oscillator each time
-// **Currently most effective way to produce multiple notes
-function setupOsc() {
-    //oscillator provides a simple tone
-    //gain node controls sound volume
-    oscillator = audioCtx.createOscillator();
-    gainNode = audioCtx.createGain();
-
-    //connects the oscillator, gain node, and destination together
-    //default output mechanism of your device is accessed with .destination
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-}
-
-function playSound(freq) {
-    console.log("playSound fired");
-    // Attack is the amt of time it takes for the gain node to reach max volume
-    var attack = 0.3;
-    // Release is the amt of time it takes for gain node to fade to 0
-    var release = 0.5;
-    setupOsc();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = freq;
-    //oscillator.start() can only be called once
-    //for this reason we create a new oscillator for each click/node
-    oscillator.start();
-    var curTime = audioCtx.currentTime;
-    gainNode.gain.setValueAtTime(0, curTime);
-    gainNode.gain.linearRampToValueAtTime(1.0, curTime + attack);
-    gainNode.gain.linearRampToValueAtTime(0.0, curTime + attack + release);
-}
+            MIDI.setVolume(0, 127);
+            MIDI.chordOn(0, [chordNote1, chordNote2, chordNote3], velocity, delay);
+            MIDI.chordOff(0, [chordNote1, chordNote2, chordNote3], delay + 0.75);
+        }
 
 //Creates the force graph from unedited data
 function initialDraw(error, graph) {
@@ -113,15 +87,25 @@ function initialDraw(error, graph) {
         .call(force.drag)
         .on('mouseover', tip.show)
         .on('mouseout', tip.hide)
-        .on('dblclick', function () {
-            playSound(440)
-        })
-        .on('click', connectedNodes);
+        .on('click', function (d) {
+            playSound(this, d.weight)
+        });
 
 
     //Attaches a circle to the node svg
     node.append("circle")
-        .attr("r", 10);
+//        .attr("r", 5);
+            .attr("r", function (d) {
+                return d.weight * 2;
+            });
+    
+    d3.selectAll("circle").on("mouseover", function(){
+        d3.select(this).attr("fill", "red");
+    })
+    
+    d3.selectAll("circle").on("mouseout", function(){
+        d3.select(this).attr("fill", "black");
+    })
 
     //Attaches text to the node
     node.append("text")
@@ -163,52 +147,17 @@ function initialDraw(error, graph) {
     });
 }
 
-//This function looks up whether a pair are neighbours
-function neighboring(a, b) {
-    return linkedByIndex[a.index + "," + b.index];
-}
-
-//Reduce the opacity of all but the neighbouring nodes
-function connectedNodes() {
-    if (toggle == 0) {
-        d = d3.select(this).node().__data__;
-        node.style("opacity", function (o) {
-            return neighboring(d, o) | neighboring(o, d) ? 1 : 0.1;
-        });
-        link.style("opacity", function (o) {
-            return d.index == o.source.index | d.index == o.target.index ? 1 : 0.1;
-        });
-        //Reduce the op
-        toggle = 1;
-    } else {
-        //Put them back to opacity=1
-        node.style("opacity", 1);
-        link.style("opacity", 1);
-        toggle = 0;
-    }
-}
-
-var toggle;
-var linkedByIndex;
-
-//node.on('click', connectedNodes);
-//node.on('click', playSound(440));
-
 //Using jquery, this loads the d3 force graph after the page has been fully loaded
 $(document).ready(function () {
     d3.json("assets/CalderData.json", function (error, data) {
         graph = data;
         initialDraw(null, graph);
-
-        //Toggle stores whether the highlighting is on
-        toggle = 0;
-        //Create an array logging what is connected to what
-        linkedByIndex = {};
-        for (i = 0; i < graph.nodes.length; i++) {
-            linkedByIndex[i + "," + i] = 1;
-        };
-        graph.links.forEach(function (d) {
-            linkedByIndex[d.source.index + "," + d.target.index] = 1;
-        });
+        
+        MIDI.loadPlugin({
+        soundfontUrl: "./soundfont/",
+        instrument: "acoustic_grand_piano",
+        onprogress: function (state, progress) {
+            console.log(state, progress);
+        }});
     });
 });
