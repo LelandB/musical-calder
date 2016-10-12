@@ -38,16 +38,22 @@ var link;
 var node;
 
 function playSound(node, offset) {
-            var delay = 0;
-            var chordNote1 = 48 + (offset * 4);
-            var chordNote2 = 52 + (offset * 4);
-            var chordNote3 = 55 + (offset * 4);
-            var velocity = 127;
+    var channel = 0,
+        instrument = 13;
+    var delay = 0;
+    var note = 48 + (offset * 4);
+    var chordNote1 = 48 + (offset * 4);
+    var chordNote2 = 52 + (offset * 4); // Difference of 4
+    var chordNote3 = 55 + (offset * 4); // Difference of 7
+    var velocity = 127;
 
-            MIDI.setVolume(0, 127);
-            MIDI.chordOn(0, [chordNote1, chordNote2, chordNote3], velocity, delay);
-            MIDI.chordOff(0, [chordNote1, chordNote2, chordNote3], delay + 0.75);
-        }
+    MIDI.programChange(0, instrument);
+    MIDI.setVolume(0, 127);
+    MIDI.noteOn(0, note, velocity, delay);
+    MIDI.noteOff(0, note, delay + 0.75);
+    //            MIDI.chordOn(0, [chordNote1, chordNote2, chordNote3], velocity, delay);
+    //            MIDI.chordOff(0, [chordNote1, chordNote2, chordNote3], delay + 0.75);
+}
 
 //Creates the force graph from unedited data
 function initialDraw(error, graph) {
@@ -94,16 +100,16 @@ function initialDraw(error, graph) {
 
     //Attaches a circle to the node svg
     node.append("circle")
-//        .attr("r", 5);
-            .attr("r", function (d) {
-                return d.weight * 2;
-            });
-    
-    d3.selectAll("circle").on("mouseover", function(){
+        //        .attr("r", 5);
+        .attr("r", function (d) {
+            return d.weight * 2;
+        });
+
+    d3.selectAll("circle").on("mouseover", function () {
         d3.select(this).attr("fill", "red");
     })
-    
-    d3.selectAll("circle").on("mouseout", function(){
+
+    d3.selectAll("circle").on("mouseout", function () {
         d3.select(this).attr("fill", "black");
     })
 
@@ -152,12 +158,30 @@ $(document).ready(function () {
     d3.json("assets/CalderData.json", function (error, data) {
         graph = data;
         initialDraw(null, graph);
-        
+
         MIDI.loadPlugin({
-        soundfontUrl: "./soundfont/",
-        instrument: "acoustic_grand_piano",
-        onprogress: function (state, progress) {
-            console.log(state, progress);
-        }});
+            soundfontUrl: "../soundfont/",
+            //MIDI number 13
+            instrument: "xylophone"
+        });
+
+        MIDI.loadPlugin({
+            soundfontUrl: "../soundfont/",
+            //MIDI number 0
+            instrument: "acoustic_grand_piano"
+        });
+
+        MIDI.loadPlugin({
+            soundfontUrl: "../soundfont/",
+            //MIDI number 118
+            instrument: "synth_drum"
+        });
+
+        //        MIDI.loadPlugin({
+        //            soundfontUrl: "./soundfont/",
+        //            instrument: "synth_drum",
+        //            onprogress: function(state, progress) {
+        //                console.log(state, progress);
+        //            }});
     });
 });
